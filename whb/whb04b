@@ -55,6 +55,7 @@ command = linuxcnc.command()
 
 
 class Whb04b_struct(ctypes.Structure):
+    buff_old = 'buff_old'
     _fields_ = [
                    #/* header of our packet */
                    ("header", ctypes.c_uint16, ),
@@ -73,10 +74,13 @@ class Whb04b_struct(ctypes.Structure):
                    
                    ("padding", ctypes.c_uint8 * 8) ]
                    
+    
+                   
 p = Whb04b_struct()          
 data = None 
 showRotary = False
 data_old = 0
+pendant_is_on = False
 def whb_send_display():
     try:
         time.sleep(0.1)
@@ -123,13 +127,16 @@ def whb_send_display():
         p.feedrate = int(stat.feedrate*100.0)
         p.sspeed = int(stat.spindlerate*100.0)    
         buff = ctypes.cast(ctypes.byref(p), ctypes.POINTER(ctypes.c_char * ctypes.sizeof(p)))
-        #print " ".join(hex(ord(c)) for c in buff.contents.raw)
-        dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[0:7])
-        dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[7:14])
-        dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[14:21])
-        #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[21:28])
-        #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[28:35])
-    except:
+        if buff.contents.raw != p.buff_old and pendant_is_on:
+            #print " ".join(hex(ord(c)) for c in buff.contents.raw)
+            dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[0:7])
+            dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[7:14])
+            dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[14:21])
+            #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[21:28])
+            #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[28:35])
+        p.buff_old = buff.contents.raw
+    except Exception as e:
+        print str(e)
         print "XHC-WHB04: Error writing data!" 
                 
                 
@@ -173,7 +180,7 @@ try:
                 thread_update_display = threading.Thread(target=whb_send_display, args=())
                 thread_update_display.start()               
             
-            data = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, timeout=1500)
+            data = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, timeout=5000)
             
             if stat.interp_state == linuxcnc.INTERP_IDLE  and stat.task_mode != linuxcnc.MODE_MANUAL:
                 command.mode( linuxcnc.MODE_MANUAL )
@@ -183,6 +190,7 @@ try:
             h.sel_z = data[5] == 19
             h.sel_a = data[5] == 20
             showRotary = data[5] > 19
+            pendant_is_on = data[5] > 16
             
             if data[4] == 13:
 	            h.inc = 0.001
@@ -267,4 +275,5 @@ try:
 
 
 except KeyboardInterrupt:
+    usb.util.dispose_resources(dev)
     raise SystemExit
