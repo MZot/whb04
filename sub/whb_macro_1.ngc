@@ -1,0 +1,16 @@
+O<whb_macro_1> sub
+;(debug, whb_macro_1, axis selector = #1, fn = #2)
+
+    o1 if [#1 EQ 17]
+        (debug, X axis set to 0.000)
+        G10 L20 P0 X0
+    o1 elseif  [#1 EQ 18]
+        (debug, Y axis set to 0.000)
+        G10 L20 P0 Y0
+    o1 elseif  [#1 EQ 19]
+        (debug, Z axis set to 0.000)
+        G10 L20 P0 Z0
+    o1 endif
+
+O<whb_macro_1> endsub
+M2

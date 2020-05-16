@@ -1,0 +1,6 @@
+O<whb_macro_3> sub
+(debug, whb_macro_3, axis selector = #1, fn = #2)
+
+;
+O<whb_macro_3> endsub
+M2

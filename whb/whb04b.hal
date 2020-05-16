@@ -1,0 +1,23 @@
+loadusr -W ./whb/whb04b
+
+net axis-0-jogenable axis.0.jog-enable whb04b.sel_x
+net axis-1-jogenable axis.1.jog-enable whb04b.sel_y
+net axis-2-jogenable axis.2.jog-enable whb04b.sel_z
+
+net joginc whb04b.inc
+net joginc axis.0.jog-scale
+net joginc axis.1.jog-scale
+net joginc axis.2.jog-scale
+
+net jogcnts whb04b.mpg_cnt
+net jogcnts axis.0.jog-counts
+net jogcnts axis.1.jog-counts
+net jogcnts axis.2.jog-counts
+
+setp axis.0.jog-vel-mode 1
+setp axis.1.jog-vel-mode 1
+setp axis.2.jog-vel-mode 1
+
+net reset whb04b.reset
+net start whb04b.start
+net stop  whb04b.stop 
