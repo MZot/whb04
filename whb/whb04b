@@ -53,7 +53,6 @@ h.ready()
 stat = linuxcnc.stat()
 command = linuxcnc.command()
 
-
 class Whb04b_struct(ctypes.Structure):
     buff_old = 'buff_old'
     _fields_ = [
@@ -71,10 +70,8 @@ class Whb04b_struct(ctypes.Structure):
                    #/* speed */
                    ("feedrate", ctypes.c_uint16),
                    ("sspeed", ctypes.c_uint16),
-                   
                    ("padding", ctypes.c_uint8 * 8) ]
                    
-    
                    
 p = Whb04b_struct()          
 data = None 
@@ -98,7 +95,7 @@ def whb_send_display():
         if a < 0 : a = 360 + a
         if b < 0 : b = 360 + b
         if c < 0 : c = 360 + c
-        
+
         p.header = 0xFDFE
         p.seed = 0xFE
         p.flags = 0x01
@@ -126,6 +123,7 @@ def whb_send_display():
             p.z_wc_frac = int(round((abs(c) % 1)*10000, -1))
         p.feedrate = int(stat.feedrate*100.0)
         p.sspeed = int(stat.spindlerate*100.0)    
+
         buff = ctypes.cast(ctypes.byref(p), ctypes.POINTER(ctypes.c_char * ctypes.sizeof(p)))
         if buff.contents.raw != p.buff_old and pendant_is_on:
             #print " ".join(hex(ord(c)) for c in buff.contents.raw)
@@ -134,7 +132,8 @@ def whb_send_display():
             dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[14:21])
             #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[21:28])
             #dev.ctrl_transfer(0x21, 0x09, 0x306, 0x00, chr(0x06) + buff.contents.raw[28:35])
-        p.buff_old = buff.contents.raw
+            p.buff_old = buff.contents.raw
+
     except Exception as e:
         print str(e)
         print "XHC-WHB04: Error writing data!" 
@@ -145,9 +144,6 @@ def mdi_macro(m, axis, fn):
         command.mode( linuxcnc.MODE_MDI )
         command.mdi("O<whb_macro_%i> call [%i] [%i]" %(m, axis, fn)  )
         print 'XHC-WHB04: executing MDI "O<whb_macro_%i> call [%i] [%i]"' %(m, axis, fn)
-        command.wait_complete()  
-        command.mode( linuxcnc.MODE_MANUAL )
-        time.sleep(0.1)
                 
 try:
     while 1:
@@ -156,7 +152,7 @@ try:
         while dev == None:
             dev = usb.core.find(idVendor=0x10ce, idProduct=0xeb93)
             time.sleep(1)
-        
+
         try:
             if dev.is_kernel_driver_active(0) is True:
                 dev.detach_kernel_driver(0)
@@ -179,9 +175,9 @@ try:
             if not thread_update_display.isAlive():
                 thread_update_display = threading.Thread(target=whb_send_display, args=())
                 thread_update_display.start()               
-            
+
             data = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, timeout=5000)
-            
+
             if stat.interp_state == linuxcnc.INTERP_IDLE  and stat.task_mode != linuxcnc.MODE_MANUAL:
                 command.mode( linuxcnc.MODE_MANUAL )
 
@@ -192,18 +188,12 @@ try:
             showRotary = data[5] > 19
             pendant_is_on = data[5] > 16
             
-            if data[4] == 13:
-	            h.inc = 0.001
-            elif data[4] == 14:
-	            h.inc = 0.01
-            elif data[4] == 15:
-	            h.inc = 0.1
-            elif data[4] == 16:
-	            h.inc = 1.0
-            else:
-	            h.inc = 0.0
-            if stat.linear_units != 1:
-                h.inc = h.inc / 10.0
+            if data[4] == 13:   h.inc = 0.001
+            elif data[4] == 14: h.inc = 0.01
+            elif data[4] == 15: h.inc = 0.1
+            elif data[4] == 16: h.inc = 1.0
+            else:               h.inc = 0.0
+            if stat.linear_units != 1: h.inc = h.inc / 10.0
 
             h.reset   = data[2] == 1 or data[3] == 1
             h.stop    = data[2] == 2 or data[3] == 2
@@ -222,10 +212,8 @@ try:
             h.macro9  = data[2] == 13 or data[3] == 13
             h.macro10 = data[2] == 16 or data[3] == 16
             
-            if data[6] > 127:
-             h.mpg_cnt=h.mpg_cnt-(256 - data[6])
-            else:
-             h.mpg_cnt=h.mpg_cnt+data[6]
+            if data[6] > 127: h.mpg_cnt = h.mpg_cnt-(256 - data[6])
+            else:             h.mpg_cnt = h.mpg_cnt+data[6]
             
             if h.reset: command.abort()
             
